@@ -46,6 +46,7 @@ const SPIELER = [
 
 const FRAGEN_PRO_RUNDE = 10;   // Fragen pro Runde
 const ANTWORTEN        = 5;    // Auswahlmöglichkeiten pro Frage
+const AEHNLICHE        = 2;    // davon bewusst ähnliche Ablenker, Rest zufällig
 const FLUG_MS          = 450;  // Flugzeit des Häkchens zum Fragezeichen
 const PAUSE_MS         = 500;  // Wartezeit nach der Antwort
 
@@ -663,11 +664,50 @@ function mischen(arr) {
 
 let fragen = [], aktuell = 0, ergebnisse = [], gesperrt = false;
 
+// Wie ähnlich sind zwei Spieler? Zählt Nummer und Name zusammen.
+// Beispiele: 17 und 71, 52 und 53, Yanick und Yanik.
+function aehnlich(a, b) {
+  let p = 0;
+  const na = a.nr, nb = b.nr;
+  if (na.split("").reverse().join("") === nb) p += 3;   // 17 und 71
+  if (na[0] === nb[0]) p += 2;                          // gleiche erste Ziffer
+  if (na.slice(-1) === nb.slice(-1)) p += 2;            // gleiche letzte Ziffer
+  if (Math.abs(na - nb) <= 3) p += 2;                   // nahe beieinander
+  if (na.length === nb.length) p += 1;
+
+  const va = kurz(a.name.split(" ")[0]), vb = kurz(b.name.split(" ")[0]);
+  const fa = kurz(a.name.split(" ").pop()), fb = kurz(b.name.split(" ").pop());
+  if (va === vb) p += 4;                                // Yanick, Yanik, Yannick
+  else if (va.slice(0, 3) === vb.slice(0, 3)) p += 2;   // Victor, Viktor
+  if (fa.slice(0, 2) === fb.slice(0, 2)) p += 2;        // Sablatnig, Säteri
+  else if (fa[0] === fb[0]) p += 1;
+  return p;
+}
+
+// Schreibvarianten angleichen, damit Yanick und Yanik gleich zählen
+function kurz(wort) {
+  return wort.toLowerCase()
+    .replace(/[äå]/g, "a").replace(/ö/g, "o").replace(/[éè]/g, "e")
+    .replace(/ck/g, "k").replace(/y/g, "i").replace(/[^a-z]/g, "");
+}
+
+// Sucht die Ablenker: erst die ähnlichsten, dann zufällig aufgefüllt
+function ablenkerWaehlen(sp) {
+  const andere = mischen(SPIELER.filter(x => x !== sp));
+  const bewertet = andere
+    .map(x => ({ x, p: aehnlich(sp, x) }))
+    .sort((a, b) => b.p - a.p);
+  const aehnliche = bewertet.filter(e => e.p > 0)
+    .slice(0, AEHNLICHE).map(e => e.x);
+  const rest = andere.filter(x => !aehnliche.includes(x));
+  return [...aehnliche, ...rest].slice(0, ANTWORTEN - 1);
+}
+
 function rundeBauen() {
   const auswahl = mischen(SPIELER).slice(0, FRAGEN_PRO_RUNDE);
   return auswahl.map((sp, i) => {
     const nrZeigen = i % 2 === 0;
-    const andere = mischen(SPIELER.filter(x => x !== sp)).slice(0, ANTWORTEN - 1);
+    const andere = ablenkerWaehlen(sp);
     const optionen = mischen([sp, ...andere]).map(o => ({
       text: nrZeigen ? o.name : o.nr,
       richtig: o === sp,
