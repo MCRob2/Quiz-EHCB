@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="de">
+<!--
+  EHCB Quiz Spielernummern
+  100 % vibe coded mit AI.
+  Idee und Co-Autor: MCRob2
+-->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EHCB Quiz</title>
 
-<script>
-// =====================================================
-//  EINSTELLUNGEN – hier alles anpassen
-// =====================================================
+<script data-quiz>
+// Einstellungen. Hier kann man Spieler, Zeiten und Texte anpassen.
 
 const SPIELER = [
   {nr:"1",  name:"Florian Scheu"},
@@ -41,11 +44,10 @@ const SPIELER = [
   {nr:"98", name:"Luca Christen"},
 ];
 
-const FRAGEN_PRO_RUNDE = 10;   // wie viele Fragen
-const ANTWORTEN        = 5;    // wie viele Auswahlmöglichkeiten
-const FLUG_MS          = 450;  // Flugdauer Häkchen Finger → Fragezeichen
-const PAUSE_RICHTIG_MS = 500;  // Häkchen steht so lange, dann nächste Frage
-const PAUSE_FALSCH_MS  = 750;  // Kreuz steht so lange, dann nächste Frage
+const FRAGEN_PRO_RUNDE = 10;   // Fragen pro Runde
+const ANTWORTEN        = 5;    // Auswahlmöglichkeiten pro Frage
+const FLUG_MS          = 450;  // Flugzeit des Häkchens zum Fragezeichen
+const PAUSE_MS         = 500;  // Wartezeit nach der Antwort
 
 const BANNER_OBEN_LINKS   = "EHCB";
 const BANNER_OBEN_RECHTS  = "HCB";
@@ -53,8 +55,8 @@ const BANNER_UNTEN_LINKS  = "Quiz Spielernummern";
 const BANNER_UNTEN_RECHTS = "Numéros des joueurs";
 const BUILD_DATUM         = "5.9.2026";
 
-// Sprüche am Ende. Index = Anzahl richtige Antworten (0 bis 10),
-// je 10 Stück, davon wird zufällig einer gezeigt.
+// Sprüche am Ende. Eine Gruppe pro Punktzahl (0 bis 10), aus jeder
+// Gruppe wird zufällig einer gezeigt.
 const SPRUECHE = [
   [ // 0 richtig
     {fr:"Zéro sur dix. Le vestiaire est fermé.",
@@ -301,8 +303,8 @@ const SPRUECHE = [
 ];
 </script>
 
-<style>
-  /* ---------- Farben & Schrift ---------- */
+<style data-quiz>
+  /* Farben und Schriftgrössen */
   :root {
     --rot:        #e2001a;   /* EHCB Rot */
     --gelb:       #ffd600;   /* EHCB Gelb */
@@ -315,13 +317,12 @@ const SPRUECHE = [
     --gruen:      #2ec462;
     --falsch:     #e63946;
 
-    --schrift-frage:      3.2rem;  /* Nummer als Frage */
-    --schrift-name:       1.9rem;  /* Name als Frage */
+    --schrift-frage:      2rem;    /* Frage oben, Nummer und Name gleich gross */
     --schrift-antwort:    1.2rem;  /* Antwort-Buttons */
-    --schrift-fragezeichen: 5rem;  /* das ? in der Mitte */
+    --schrift-fragezeichen: 3.6rem; /* das ? in der Mitte */
   }
 
-  /* ---------- Grundlayout ---------- */
+  /* Grundaufbau der Seite */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -336,7 +337,7 @@ const SPRUECHE = [
 
   .banner {
     position: relative;
-    height: 88px;
+    height: 104px;
     flex-shrink: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -350,21 +351,21 @@ const SPRUECHE = [
   .banner .f1, .banner .f4 { background: var(--rot); }
   .banner .f2, .banner .f3 { background: var(--gelb); }
   .banner .f1, .banner .f2 {
-    font-size: 1.35rem; font-weight: 800; letter-spacing: 0.02em;
+    font-size: 1.7rem; font-weight: 800; letter-spacing: 0.02em;
   }
-  .banner .f3, .banner .f4 { font-size: 0.85rem; font-weight: 600; }
+  .banner .f3, .banner .f4 { font-size: 0.95rem; font-weight: 600; }
   .banner .build {
     position: absolute; left: 5px; bottom: 3px;
     font-size: 0.55rem; font-weight: 500; opacity: 0.7;
   }
   .banner .info-btn {
-    position: absolute; right: 4px; bottom: 2px;
-    background: none; border: none; padding: 4px;
-    font-size: 0.85rem; line-height: 1; cursor: pointer;
-    opacity: 0.75;
+    position: absolute; right: 6px; bottom: 2px;
+    background: none; border: none; padding: 4px 6px;
+    font: inherit; font-size: 0.7rem; font-weight: 700;
+    color: var(--blau); opacity: 0.55; cursor: pointer;
   }
 
-  /* ---------- Info-Overlay ---------- */
+  /* Infoseite */
   .info {
     position: fixed; inset: 0;
     background: var(--hintergrund);
@@ -378,7 +379,8 @@ const SPRUECHE = [
   .info h2 { font-size: 1.15rem; margin-bottom: 0.75rem; }
   .info p { margin-bottom: 0.75rem; }
   .info ul { margin: 0 0 0.75rem 1.2rem; }
-  .info li { margin-bottom: 0.25rem; }
+  .info li { margin-bottom: 0.35rem; }
+  .info .hinweis { color: var(--text-dim); font-size: 0.85rem; }
   .info .knopf {
     width: 100%; padding: 12px;
     border: 1px solid var(--rand); border-radius: 10px;
@@ -415,7 +417,7 @@ const SPRUECHE = [
   }
   #inhalt { flex: 1; display: flex; flex-direction: column; }
 
-  /* ---------- Penalty-Kreise ---------- */
+  /* Die zehn Kreise für den Fortschritt */
   .kreise { display: flex; gap: 6px; justify-content: center; }
   .kreis {
     width: 26px; height: 26px;
@@ -431,26 +433,29 @@ const SPRUECHE = [
     50%     { box-shadow: 0 0 0 5px rgba(255,255,255,0); }
   }
 
-  /* ---------- Frage ---------- */
+  /* Die Frage oben */
   .frage {
     background: var(--karte);
     border: 1px solid var(--rand);
     border-radius: 12px;
-    padding: 1.25rem;
+    padding: 0.9rem 1rem;
     text-align: center;
     display: flex; align-items: center; justify-content: center;
-    min-height: 100px;
+    min-height: 72px;
   }
   .frage.nummer {
     font-family: ui-monospace, Menlo, monospace;
     font-size: var(--schrift-frage); font-weight: 700;
   }
-  .frage.name   { font-size: var(--schrift-name); font-weight: 700; }
+  .frage.name {
+    font-size: var(--schrift-frage); font-weight: 700;
+    white-space: nowrap;
+  }
 
-  /* ---------- Fragezeichen / Zeichen in der Mitte ---------- */
+  /* Fragezeichen in der Mitte */
   .mitte {
     display: flex; align-items: center; justify-content: center;
-    height: 85px;
+    height: 64px;
   }
   .mitte .fz {
     font-size: var(--schrift-fragezeichen);
@@ -460,12 +465,12 @@ const SPRUECHE = [
     transition: opacity 0.25s ease;
   }
   .mitte .fz.weg { opacity: 0; }
-  .mitte svg { width: 64px; height: 64px; }
+  .mitte svg { width: 52px; height: 52px; }
 
-  /* ---------- Antworten ---------- */
-  .antworten { display: flex; flex-direction: column; gap: 8px; }
+  /* Die fünf Antwort-Knöpfe */
+  .antworten { display: flex; flex-direction: column; gap: 10px; }
   .antwort {
-    padding: 18px 14px;
+    padding: 16px 14px;
     border: 1px solid var(--rand);
     border-radius: 10px;
     background: var(--karte);
@@ -489,7 +494,7 @@ const SPRUECHE = [
   .antwort.dim { opacity: 0.3; }
   .antworten.gesperrt .antwort { pointer-events: none; }
 
-  /* ---------- Häkchen / Kreuz (Animation) ---------- */
+  /* Häkchen und Kreuz */
   svg.zeichen path {
     fill: none; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round;
     stroke-dasharray: 200; stroke-dashoffset: 200;
@@ -501,11 +506,11 @@ const SPRUECHE = [
   svg.zeichen.still, svg.zeichen.still path { animation: none; }
   svg.zeichen.still path { stroke-dashoffset: 0; }
 
-  /* am Finger: erscheint an der Tipp-Stelle, fliegt zum Fragezeichen */
+  /* Erscheint beim Finger und fliegt zum Fragezeichen */
   .finger {
     position: fixed;
     width: 64px; height: 64px;
-    margin: -32px 0 0 -32px;   /* zentriert auf den Punkt */
+    margin: -32px 0 0 -32px;   /* mittig auf dem Tipp-Punkt */
     pointer-events: none;
     transition: left var(--flug) ease-in-out, top var(--flug) ease-in-out;
   }
@@ -514,7 +519,7 @@ const SPRUECHE = [
   @keyframes pop       { from{transform:scale(0.3)} to{transform:scale(1)} }
   @keyframes zeichnen  { to{stroke-dashoffset:0} }
 
-  /* ---------- Ende ---------- */
+  /* Schlussbild mit Punktzahl */
   .ende {
     background: var(--karte);
     border: 1px solid var(--rand);
@@ -559,37 +564,28 @@ const SPRUECHE = [
   <div class="f1" id="b1"></div><div class="f2" id="b2"></div>
   <div class="f3" id="b3"></div><div class="f4" id="b4"></div>
   <span class="build" id="build"></span>
-  <button class="info-btn" onclick="infoZeigen(true)" aria-label="Info">ℹ️</button>
+  <button class="info-btn" onclick="infoZeigen(true)" aria-label="Info">i</button>
 </div>
 
 <div class="info zu" id="info">
-  <h2>Was ist das hier?</h2>
+  <h2>Über dieses Quiz</h2>
   <p>Ein inoffizielles Quiz zum Lernen der Spielernummern des
-  EHC Biel-Bienne. Keine Verbindung zum Club. Namen und Nummern
-  stammen von ehcb.ch, Stand siehe Datum im Banner.</p>
-
-  <h2>Technik</h2>
+  EHC Biel-Bienne, ohne Verbindung zum Club. Die Namen und Nummern
+  stammen von ehcb.ch, Stand siehe Datum im Banner. Der Code wurde
+  vollständig von einer KI geschrieben, im Gespräch mit dem Autor,
+  der Wünsche formuliert und getestet hat. Auch die Sprüche am Ende
+  sind von der KI.</p>
   <ul>
-    <li>Eine einzige HTML-Datei. Sonst nichts.</li>
-    <li>Benutzt nur HTML, CSS und JavaScript, wie es jeder Browser
-    von Haus aus kann. Keine Bibliotheken, keine Frameworks,
-    keine externen Schriften, keine Bilder.</li>
-    <li>Die Seite lädt nichts nach und sendet nichts. Sie funktioniert auch offline.</li>
+    <li>Eine einzelne HTML-Datei mit CSS und JavaScript, wie es
+    jeder Browser mitbringt. Keine Bibliotheken, keine externen
+    Schriften.</li>
+    <li>Läuft komplett auf dem Gerät, auch offline. Es wird nichts
+    geladen und nichts gesendet.</li>
+    <li>Keine Cookies, keine Speicherung, keine Statistik. Nach dem
+    Neuladen beginnt alles von vorn.</li>
   </ul>
-
-  <h2>Daten</h2>
-  <ul>
-    <li>Keine Cookies.</li>
-    <li>Kein Tracking, keine Analytics, keine Statistik.</li>
-    <li>Nichts wird gespeichert, auch nicht lokal. Seite neu laden = alles weg.</li>
-    <li>Es gibt keinen Server, der etwas empfangen könnte.</li>
-  </ul>
-
-  <h2>Herkunft</h2>
-  <p>Der gesamte Code wurde zu 100 % von einer KI geschrieben,
-  im Dialog mit dem Autor. Der Autor hat Wünsche formuliert,
-  getestet und Korrekturen verlangt, aber keine Zeile selbst
-  geschrieben. Auch die Sprüche am Ende stammen von der KI.</p>
+  <p class="hinweis">Der Quelltext unten ist die komplette Datei,
+  so wie der Browser sie geladen hat.</p>
 
   <button class="knopf" id="qbtn" onclick="quelltextZeigen()">Quelltext anzeigen</button>
   <pre id="quelltext" class="code"></pre>
@@ -601,27 +597,37 @@ const SPRUECHE = [
   <div id="inhalt"></div>
 </div>
 
-<script>
-// Quelltext festhalten, bevor das Script die Seite verändert
-const QUELLTEXT = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+<script data-quiz>
+// Den Quelltext merken, bevor die Seite verändert wird.
+// Manche Apps schieben eigene Scripts in die Seite; nur Teile mit
+// der Markierung data-quiz gehören wirklich zu dieser Datei.
+const QUELLTEXT = (() => {
+  const kopie = document.documentElement.cloneNode(true);
+  kopie.querySelectorAll("script, style, link, iframe").forEach(el => {
+    if (!el.hasAttribute("data-quiz")) el.remove();
+  });
+  return "<!DOCTYPE html>\n" + kopie.outerHTML;
+})();
 
 function infoZeigen(auf) {
   document.getElementById("info").classList.toggle("zu", !auf);
   if (auf) document.getElementById("info").scrollTop = 0;
 }
 
-// Sehr einfache Einfärbung: Kommentare, Strings, Tags, Schlüsselwörter, Zahlen
+// Färbt den Quelltext für die Anzeige ein. Erkennt nur das Nötigste.
 function einfaerben(code) {
   const esc = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const muster = [
-    /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|&lt;!--[\s\S]*?--&gt;)/,        // c
-    /("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/,  // s
-    /(&lt;\/?[a-zA-Z][^&]*?&gt;)/,                                  // t
-    /\b(const|let|function|return|if|else|for|of|new|true|false)\b/, // k
-    /\b(\d+(?:\.\d+)?)\b/,                                          // n
-  ];
+
+  const kommentar = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|&lt;!--[\s\S]*?--&gt;)/;
+  const text      = /("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/;
+  const tag       = /(&lt;\/?[a-zA-Z][^&]*?&gt;)/;
+  const wort      = /\b(const|let|function|return|if|else|for|of|new|true|false)\b/;
+  const zahl      = /\b(\d+(?:\.\d+)?)\b/;
+
+  const alle = [kommentar, text, tag, wort, zahl];
   const klassen = ["c", "s", "t", "k", "n"];
-  const re = new RegExp(muster.map(m => m.source).join("|"), "g");
+  const re = new RegExp(alle.map(m => m.source).join("|"), "g");
+
   return esc.replace(re, (...g) => {
     const i = g.slice(1, 6).findIndex(x => x !== undefined);
     return `<span class="${klassen[i]}">${g[i + 1]}</span>`;
@@ -686,7 +692,7 @@ function antworten(idx, ev) {
   const richtig = f.optionen[idx].richtig;
   ergebnisse.push(richtig);
 
-  // Buttons färben
+  // Antworten einfärben
   document.querySelectorAll(".antwort").forEach((b, i) => {
     if (f.optionen[i].richtig) b.classList.add("ok");
     else if (i === idx) b.classList.add("bad");
@@ -694,7 +700,7 @@ function antworten(idx, ev) {
   });
   document.querySelector(".antworten").classList.add("gesperrt");
 
-  // Fragezeichen sofort ausblenden, Häkchen/Kreuz an der Tipp-Stelle erzeugen …
+  // Fragezeichen ausblenden, Häkchen oder Kreuz beim Finger erzeugen
   const mitte = document.getElementById("mitte");
   mitte.querySelector(".fz").classList.add("weg");
   const ziel = mitte.getBoundingClientRect();
@@ -706,13 +712,13 @@ function antworten(idx, ev) {
   fg.innerHTML = zeichenSvg(richtig);
   document.body.appendChild(fg);
 
-  // … und zum Fragezeichen fliegen lassen
+  // Zum Fragezeichen fliegen lassen
   requestAnimationFrame(() => requestAnimationFrame(() => {
     fg.style.left = (ziel.left + ziel.width / 2) + "px";
     fg.style.top  = (ziel.top + ziel.height / 2) + "px";
   }));
 
-  // bei Ankunft: Fragezeichen ersetzen, Flieger entfernen
+  // Bei Ankunft das Fragezeichen ersetzen
   setTimeout(() => {
     mitte.innerHTML = zeichenSvg(richtig, true);
     fg.remove();
@@ -720,12 +726,12 @@ function antworten(idx, ev) {
 
   kreiseZeigen();
 
-  // nach Flug + Standzeit: nächste Frage
+  // Nach Flug und Wartezeit die nächste Frage zeigen
   setTimeout(() => {
     aktuell++;
     gesperrt = false;
     zeigen();
-  }, FLUG_MS + (richtig ? PAUSE_RICHTIG_MS : PAUSE_FALSCH_MS));
+  }, FLUG_MS + PAUSE_MS);
 }
 
 function kreiseZeigen() {
@@ -748,7 +754,7 @@ function zeigen() {
     const liste = SPRUECHE[Math.min(n, SPRUECHE.length - 1)];
     const s = liste[Math.floor(Math.random() * liste.length)];
 
-    // Fehlerliste: nur die falsch beantworteten Spieler
+    // Liste der falsch beantworteten Spieler
     let fehlerHtml = "";
     const fehler = fragen.filter((f, i) => !ergebnisse[i]);
     if (fehler.length > 0) {
@@ -783,6 +789,18 @@ function zeigen() {
   });
   html += `</div>`;
   el.innerHTML = html;
+  nameEinpassen();
+}
+
+// Verkleinert einen langen Namen so weit, dass er auf eine Zeile passt
+function nameEinpassen() {
+  const box = document.querySelector(".frage.name");
+  if (!box) return;
+  let px = parseFloat(getComputedStyle(box).fontSize);
+  while (box.scrollWidth > box.clientWidth && px > 14) {
+    px -= 1;
+    box.style.fontSize = px + "px";
+  }
 }
 
 document.getElementById("b1").textContent = BANNER_OBEN_LINKS;
