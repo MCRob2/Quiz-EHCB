@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EHCB Quiz</title>
+
+<script>
+// =====================================================
+//  EINSTELLUNGEN – hier alles anpassen
+// =====================================================
+
+const SPIELER = [
+  {nr:"1",  name:"Florian Scheu"},
+  {nr:"35", name:"Harri Säteri"},
+  {nr:"60", name:"Viktor Östlund"},
+  {nr:"9",  name:"Victor Söderström"},
+  {nr:"14", name:"Niklas Blessing"},
+  {nr:"18", name:"Yanick Stampfli"},
+  {nr:"49", name:"Miro Zryd"},
+  {nr:"52", name:"Cédric Aeschbach"},
+  {nr:"71", name:"Yanik Burren"},
+  {nr:"75", name:"Alexander Yakovenko"},
+  {nr:"77", name:"Robin Grossmann"},
+  {nr:"86", name:"Dario Trutmann"},
+  {nr:"13", name:"Nolan Cattin"},
+  {nr:"15", name:"Yanick Sablatnig"},
+  {nr:"16", name:"Fabio Hofer"},
+  {nr:"17", name:"Jérémie Bärtschi"},
+  {nr:"19", name:"Jonah Neuenschwander"},
+  {nr:"23", name:"Mark Sever"},
+  {nr:"24", name:"Lias Andersson"},
+  {nr:"25", name:"Toni Rajala"},
+  {nr:"28", name:"Léo Braillard"},
+  {nr:"29", name:"Marcus Sylvegård"},
+  {nr:"53", name:"Jeff Skinner"},
+  {nr:"61", name:"Dominic Zwerger"},
+  {nr:"73", name:"Petr Čajka"},
+  {nr:"89", name:"Joël Vermin"},
+  {nr:"92", name:"Gaëtan Haas"},
+  {nr:"98", name:"Luca Christen"},
+];
+
+const FRAGEN_PRO_RUNDE = 10;   // wie viele Fragen
+const ANTWORTEN        = 5;    // wie viele Auswahlmöglichkeiten
+const FLUG_MS          = 450;  // Flugdauer Häkchen Finger → Fragezeichen
+const PAUSE_RICHTIG_MS = 500;  // Häkchen steht so lange, dann nächste Frage
+const PAUSE_FALSCH_MS  = 750;  // Kreuz steht so lange, dann nächste Frage
+
+const BANNER_OBEN_LINKS   = "EHCB";
+const BANNER_OBEN_RECHTS  = "HCB";
+const BANNER_UNTEN_LINKS  = "Quiz Spielernummern";
+const BANNER_UNTEN_RECHTS = "Numéros des joueurs";
+const BUILD_DATUM         = "5.9.2026";
+
+// Sprüche am Ende. Index = Anzahl richtige Antworten (0 bis 10),
+// je 10 Stück, davon wird zufällig einer gezeigt.
+const SPRUECHE = [
+  [ // 0 richtig
+    {fr:"Zéro sur dix. Le vestiaire est fermé.",
+     de:"Null von zehn. Die Kabine ist zu."},
+    {fr:"Même le Zamboni aurait fait mieux.",
+     de:"Selbst die Eismaschine hätte mehr getroffen."},
+    {fr:"Blanchissage total. Pour l'adversaire.",
+     de:"Shutout. Für den Gegner."},
+    {fr:"Bon, on recommence depuis le premier entraînement.",
+     de:"Gut, zurück zum ersten Training."},
+    {fr:"Tu as regardé le match ou le bar?",
+     de:"Warst du am Match oder an der Bar?"},
+    {fr:"Aucun but. Aucune passe. Aucune idée.",
+     de:"Kein Tor, kein Pass, keine Ahnung."},
+    {fr:"C'est un début. Techniquement.",
+     de:"Das ist ein Anfang. Technisch gesehen."},
+    {fr:"Le tableau de bord affiche zéro. Le tableau ne ment pas.",
+     de:"Die Anzeigetafel sagt null. Die Tafel lügt nicht."},
+    {fr:"Chaque légende a commencé quelque part. Ici, c'est très bas.",
+     de:"Jede Legende fängt irgendwo an. Hier ist es sehr weit unten."},
+    {fr:"Dix tirs, dix arrêts. Dommage que tu sois le tireur.",
+     de:"Zehn Schüsse, zehn Paraden. Schade, dass du der Schütze warst."},
+  ],
+  [ // 1 richtig
+    {fr:"Un sur dix. Un but de consolation.",
+     de:"Eins von zehn. Ein Ehrentreffer."},
+    {fr:"Au moins un puck est rentré.",
+     de:"Immerhin ist ein Puck drin."},
+    {fr:"Tu connais un joueur. Il sera flatté.",
+     de:"Du kennst einen Spieler. Er wird sich freuen."},
+    {fr:"Une flèche dans le mille, neuf dans la bande.",
+     de:"Ein Treffer, neun in die Bande."},
+    {fr:"Le fan club t'a repéré. Pas en bien.",
+     de:"Der Fanclub hat dich bemerkt. Nicht positiv."},
+    {fr:"C'est mieux que zéro. De peu.",
+     de:"Besser als null. Knapp."},
+    {fr:"Un point. Comme après une défaite en prolongation.",
+     de:"Ein Punkt. Wie nach einer Niederlage in der Verlängerung."},
+    {fr:"Tu es à un but de deux buts.",
+     de:"Du bist ein Tor von zwei Toren entfernt."},
+    {fr:"Le coach note ton nom. Dans la mauvaise colonne.",
+     de:"Der Coach notiert deinen Namen. In der falschen Spalte."},
+    {fr:"Le maillot, tu le connais. Les noms dessus, moins.",
+     de:"Das Trikot kennst du. Die Namen drauf weniger."},
+  ],
+  [ // 2 richtig
+    {fr:"Deux sur dix. Une passe, un tir, c'est tout.",
+     de:"Zwei von zehn. Ein Pass, ein Schuss, das war's."},
+    {fr:"Tu commences à reconnaître des visages.",
+     de:"Du erkennst langsam Gesichter."},
+    {fr:"Deux buts en dix tirs. Le gardien adverse dort.",
+     de:"Zwei Tore bei zehn Schüssen. Der gegnerische Goalie schläft."},
+    {fr:"C'est un quatrième trio. Sans les minutes de jeu.",
+     de:"Das ist ein vierter Block. Ohne Eiszeit."},
+    {fr:"Vingt pour cent. Le power-play du fond du classement.",
+     de:"Zwanzig Prozent. Powerplay vom Tabellenende."},
+    {fr:"Encore quelques matches à domicile et ça viendra.",
+     de:"Noch ein paar Heimspiele, dann kommt's."},
+    {fr:"Le gardien te dit merci.",
+     de:"Der Goalie sagt danke."},
+    {fr:"Deux noms. C'est presque une ligne.",
+     de:"Zwei Namen. Fast eine Linie."},
+    {fr:"Tu as vu le logo. Le reste, c'est flou.",
+     de:"Das Logo hast du gesehen. Der Rest ist unscharf."},
+    {fr:"On sent le potentiel. Très loin.",
+     de:"Man spürt Potenzial. Sehr weit weg."},
+  ],
+  [ // 3 richtig
+    {fr:"Trois sur dix. Un trio complet, au moins.",
+     de:"Drei von zehn. Immerhin ein kompletter Block."},
+    {fr:"Tu connais le nom du club. Et trois joueurs.",
+     de:"Du kennst den Clubnamen. Und drei Spieler."},
+    {fr:"Trente pour cent. Un tireur de penalty moyen.",
+     de:"Dreissig Prozent. Ein durchschnittlicher Penaltyschütze."},
+    {fr:"Ça avance. Lentement. Comme le bus des supporters.",
+     de:"Es geht vorwärts. Langsam. Wie der Fanbus."},
+    {fr:"Trois buts. Un hat-trick. Sur dix tirs.",
+     de:"Drei Tore. Ein Hattrick. Bei zehn Schüssen."},
+    {fr:"Tu es sur la bonne patinoire. Pas encore dans la bonne zone.",
+     de:"Du bist auf dem richtigen Eis. Noch nicht in der richtigen Zone."},
+    {fr:"Un match moyen un mardi soir.",
+     de:"Ein durchschnittlicher Dienstagabend."},
+    {fr:"Le coach te laisse sur le banc, mais il t'a vu.",
+     de:"Der Coach lässt dich auf der Bank, aber er hat dich gesehen."},
+    {fr:"Trois noms de plus qu'un touriste.",
+     de:"Drei Namen mehr als ein Tourist."},
+    {fr:"Encore une saison et tu chantes avec la Curva.",
+     de:"Noch eine Saison und du singst in der Kurve."},
+  ],
+  [ // 4 richtig
+    {fr:"Quatre sur dix. Presque la moitié, presque un fan.",
+     de:"Vier von zehn. Fast die Hälfte, fast ein Fan."},
+    {fr:"Deux trios. Il manque la défense.",
+     de:"Zwei Blöcke. Die Verteidigung fehlt."},
+    {fr:"C'est le score d'un abonné qui vient une fois sur deux.",
+     de:"Das ist der Score eines Abonnenten, der jedes zweite Mal kommt."},
+    {fr:"Quarante pour cent. Un power-play correct.",
+     de:"Vierzig Prozent. Ein anständiges Powerplay."},
+    {fr:"Tu es à un but de la moyenne.",
+     de:"Du bist ein Tor vom Schnitt entfernt."},
+    {fr:"Solide début. Pas encore solide fin.",
+     de:"Solider Start. Noch kein solides Ende."},
+    {fr:"On voit que tu écoutes le speaker.",
+     de:"Man merkt, dass du dem Speaker zuhörst."},
+    {fr:"Quatre buts. Le gardien adverse est changé.",
+     de:"Vier Tore. Der gegnerische Goalie wird ausgewechselt."},
+    {fr:"Tu commences à lire le programme du match.",
+     de:"Du liest langsam das Matchprogramm."},
+    {fr:"Pas mal. Pas bien. Entre les deux.",
+     de:"Nicht schlecht. Nicht gut. Dazwischen."},
+  ],
+  [ // 5 richtig
+    {fr:"Cinq sur dix. Match nul. Prolongation.",
+     de:"Fünf von zehn. Unentschieden. Verlängerung."},
+    {fr:"La moitié. Comme après deux tiers.",
+     de:"Die Hälfte. Wie nach zwei Dritteln."},
+    {fr:"Tu connais l'attaque ou la défense. Pas les deux.",
+     de:"Du kennst entweder Sturm oder Verteidigung. Nicht beides."},
+    {fr:"Cinquante pour cent. Un bon gardien de troisième ligue.",
+     de:"Fünfzig Prozent. Ein guter Drittliga-Goalie."},
+    {fr:"Pile ou face aurait fait pareil. Mais tu as réfléchi.",
+     de:"Münzwurf hätte dasselbe gebracht. Aber du hast nachgedacht."},
+    {fr:"C'est le score d'un vrai abonné.",
+     de:"Das ist der Score eines echten Abonnenten."},
+    {fr:"Cinq buts. On parle d'un match spectaculaire.",
+     de:"Fünf Tore. Man spricht von einem spektakulären Spiel."},
+    {fr:"Une bonne base. Le reste, c'est du travail.",
+     de:"Eine gute Basis. Der Rest ist Arbeit."},
+    {fr:"Ni héros, ni zéro.",
+     de:"Weder Held noch Null."},
+    {fr:"Tu es dans le milieu du classement. Confortable.",
+     de:"Du bist im Tabellenmittelfeld. Bequem."},
+  ],
+  [ // 6 richtig
+    {fr:"Six sur dix. Victoire en prolongation.",
+     de:"Sechs von zehn. Sieg in der Verlängerung."},
+    {fr:"Plus de la moitié. Le coach sourit un peu.",
+     de:"Mehr als die Hälfte. Der Coach lächelt ein bisschen."},
+    {fr:"Soixante pour cent. Un bon taux aux engagements.",
+     de:"Sechzig Prozent. Eine gute Bully-Quote."},
+    {fr:"Tu es dans le top six. Comme en playoffs.",
+     de:"Du bist unter den Top Sechs. Wie in den Playoffs."},
+    {fr:"Six buts. Le speaker n'a plus de voix.",
+     de:"Sechs Tore. Der Speaker hat keine Stimme mehr."},
+    {fr:"Tu connais deux trios et un duo de défense.",
+     de:"Du kennst zwei Blöcke und ein Verteidigerpaar."},
+    {fr:"Ça sent le fan avec un maillot à la maison.",
+     de:"Das riecht nach einem Fan mit Trikot im Schrank."},
+    {fr:"Bon match. Pas parfait. Bon.",
+     de:"Gutes Spiel. Nicht perfekt. Gut."},
+    {fr:"Le vestiaire t'accepte. Pas encore le capitaine.",
+     de:"Die Kabine akzeptiert dich. Der Captain noch nicht."},
+    {fr:"Encore quelques révisions et tu seras dangereux.",
+     de:"Noch ein bisschen Repetition und du wirst gefährlich."},
+  ],
+  [ // 7 richtig
+    {fr:"Sept sur dix. Victoire nette.",
+     de:"Sieben von zehn. Klarer Sieg."},
+    {fr:"Tu connais plus de noms que certains journalistes.",
+     de:"Du kennst mehr Namen als manche Journalisten."},
+    {fr:"Soixante-dix pour cent. Un power-play de haut niveau.",
+     de:"Siebzig Prozent. Powerplay auf hohem Niveau."},
+    {fr:"Sept buts. On parle de correction.",
+     de:"Sieben Tore. Man spricht von einer Abreibung."},
+    {fr:"Trois trios sur quatre. Le quatrième te pardonne.",
+     de:"Drei von vier Blöcken. Der vierte verzeiht dir."},
+    {fr:"C'est le score d'un abonné qui vient toujours.",
+     de:"Das ist der Score eines Abonnenten, der immer kommt."},
+    {fr:"Solide. Le coach te met en power-play.",
+     de:"Solide. Der Coach stellt dich ins Powerplay."},
+    {fr:"Tu commences à corriger le speaker.",
+     de:"Du korrigierst langsam den Speaker."},
+    {fr:"Il manque trois noms. Tu sais lesquels.",
+     de:"Drei Namen fehlen. Du weisst welche."},
+    {fr:"Bien joué. Vraiment bien joué.",
+     de:"Gut gespielt. Wirklich gut gespielt."},
+  ],
+  [ // 8 richtig
+    {fr:"Huit sur dix. Le vestiaire te connaît.",
+     de:"Acht von zehn. Die Kabine kennt dich."},
+    {fr:"Quatre-vingts pour cent. Un gardien de National League.",
+     de:"Achtzig Prozent. Ein National-League-Goalie."},
+    {fr:"Huit buts. L'adversaire demande grâce.",
+     de:"Acht Tore. Der Gegner bittet um Gnade."},
+    {fr:"Presque tout le cadre. Deux visages flous.",
+     de:"Fast der ganze Kader. Zwei Gesichter unscharf."},
+    {fr:"Tu pourrais faire le speaker à la Tissot Arena.",
+     de:"Du könntest Speaker in der Tissot Arena sein."},
+    {fr:"Deux erreurs. Le coach les a vues. Il te garde.",
+     de:"Zwei Fehler. Der Coach hat sie gesehen. Er behält dich."},
+    {fr:"Le maillot avec ton nom est commandé.",
+     de:"Das Trikot mit deinem Namen ist bestellt."},
+    {fr:"Très solide. Encore deux et c'est le titre.",
+     de:"Sehr solide. Noch zwei und es ist der Titel."},
+    {fr:"Tu connais le cadre mieux que certains joueurs.",
+     de:"Du kennst den Kader besser als manche Spieler."},
+    {fr:"C'est un fan. Un vrai.",
+     de:"Das ist ein Fan. Ein echter."},
+  ],
+  [ // 9 richtig
+    {fr:"Neuf sur dix. Un seul tir dans la bande.",
+     de:"Neun von zehn. Ein einziger Schuss in die Bande."},
+    {fr:"Quatre-vingt-dix pour cent. Un gardien en état de grâce.",
+     de:"Neunzig Prozent. Ein Goalie im Ausnahmezustand."},
+    {fr:"Neuf buts. Le record du club est proche.",
+     de:"Neun Tore. Der Clubrekord ist nah."},
+    {fr:"Une erreur. Le puck a touché le poteau.",
+     de:"Ein Fehler. Der Puck hat den Pfosten getroffen."},
+    {fr:"Tu es à un nom de la perfection.",
+     de:"Du bist einen Namen von der Perfektion entfernt."},
+    {fr:"Le capitaine te serre la main.",
+     de:"Der Captain gibt dir die Hand."},
+    {fr:"Presque parfait. Presque.",
+     de:"Fast perfekt. Fast."},
+    {fr:"Tu pourrais signer les autographes à leur place.",
+     de:"Du könntest die Autogramme an ihrer Stelle unterschreiben."},
+    {fr:"Une seule ombre au tableau. On oublie.",
+     de:"Ein einziger Schatten. Wir vergessen ihn."},
+    {fr:"Le cadre est dans ta tête. Sauf un.",
+     de:"Der Kader ist in deinem Kopf. Bis auf einen."},
+  ],
+  [ // 10 richtig
+    {fr:"Dix sur dix. Blanchissage. Pour toi.",
+     de:"Zehn von zehn. Shutout. Für dich."},
+    {fr:"Parfait. Le coach n'a rien à dire.",
+     de:"Perfekt. Der Coach hat nichts zu sagen."},
+    {fr:"Cent pour cent. Le tableau est vert.",
+     de:"Hundert Prozent. Die Tafel ist grün."},
+    {fr:"Tu connais le cadre par cœur. Littéralement.",
+     de:"Du kennst den Kader auswendig. Wörtlich."},
+    {fr:"Dix buts en dix tirs. Le gardien adverse a démissionné.",
+     de:"Zehn Tore bei zehn Schüssen. Der gegnerische Goalie hat gekündigt."},
+    {fr:"C'est un titre. Sans prolongation.",
+     de:"Das ist ein Titel. Ohne Verlängerung."},
+    {fr:"Le capitaine te passe le brassard.",
+     de:"Der Captain gibt dir das C."},
+    {fr:"Rien à corriger. Rien à ajouter.",
+     de:"Nichts zu korrigieren. Nichts hinzuzufügen."},
+    {fr:"Tu peux aller boire une bière. Tu l'as méritée.",
+     de:"Du kannst ein Bier trinken gehen. Verdient."},
+    {fr:"Sans faute. La Curva chante ton nom.",
+     de:"Fehlerfrei. Die Kurve singt deinen Namen."},
+  ],
+];
+</script>
+
+<style>
+  /* ---------- Farben & Schrift ---------- */
+  :root {
+    --rot:        #e2001a;   /* EHCB Rot */
+    --gelb:       #ffd600;   /* EHCB Gelb */
+    --blau:       #1d2a6b;   /* EHCB Dunkelblau (Bannertext) */
+    --hintergrund:#0f1117;
+    --karte:      #1a1d27;
+    --rand:       #2e3340;
+    --text:       #e2e4ea;
+    --grau:       #3a3f4d;   /* Fragezeichen */
+    --gruen:      #2ec462;
+    --falsch:     #e63946;
+
+    --schrift-frage:      3.2rem;  /* Nummer als Frage */
+    --schrift-name:       1.9rem;  /* Name als Frage */
+    --schrift-antwort:    1.2rem;  /* Antwort-Buttons */
+    --schrift-fragezeichen: 5rem;  /* das ? in der Mitte */
+  }
+
+  /* ---------- Grundlayout ---------- */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--hintergrund);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+  }
+
+  .banner {
+    position: relative;
+    height: 88px;
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    color: var(--blau);
+  }
+  .banner > div {
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .banner .f1, .banner .f4 { background: var(--rot); }
+  .banner .f2, .banner .f3 { background: var(--gelb); }
+  .banner .f1, .banner .f2 {
+    font-size: 1.35rem; font-weight: 800; letter-spacing: 0.02em;
+  }
+  .banner .f3, .banner .f4 { font-size: 0.85rem; font-weight: 600; }
+  .banner .build {
+    position: absolute; left: 5px; bottom: 3px;
+    font-size: 0.55rem; font-weight: 500; opacity: 0.7;
+  }
+  .banner .info-btn {
+    position: absolute; right: 4px; bottom: 2px;
+    background: none; border: none; padding: 4px;
+    font-size: 0.85rem; line-height: 1; cursor: pointer;
+    opacity: 0.75;
+  }
+
+  /* ---------- Info-Overlay ---------- */
+  .info {
+    position: fixed; inset: 0;
+    background: var(--hintergrund);
+    z-index: 10;
+    overflow-y: auto;
+    padding: 1.25rem 1rem 2rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .info.zu { display: none; }
+  .info h2 { font-size: 1.15rem; margin-bottom: 0.75rem; }
+  .info p { margin-bottom: 0.75rem; }
+  .info ul { margin: 0 0 0.75rem 1.2rem; }
+  .info li { margin-bottom: 0.25rem; }
+  .info .knopf {
+    width: 100%; padding: 12px;
+    border: 1px solid var(--rand); border-radius: 10px;
+    background: var(--karte); color: var(--text);
+    font: inherit; font-weight: 600; cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  .info .knopf.rot { background: var(--rot); color: #fff; border: none; }
+  .info pre.code {
+    display: none;
+    margin: 1rem 0 0;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.68rem; line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #c8ccd6;
+  }
+  .info pre.code.auf { display: block; }
+  .code .k { color: #c792ea; }   /* Schlüsselwörter */
+  .code .s { color: #c3e88d; }   /* Strings */
+  .code .c { color: #6a6f7e; font-style: italic; }  /* Kommentare */
+  .code .t { color: #82aaff; }   /* HTML-Tags */
+  .code .n { color: #f78c6c; }   /* Zahlen */
+
+  .app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 420px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  #inhalt { flex: 1; display: flex; flex-direction: column; }
+
+  /* ---------- Penalty-Kreise ---------- */
+  .kreise { display: flex; gap: 6px; justify-content: center; }
+  .kreis {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    background: #000;
+  }
+  .kreis.ok  { background: var(--gruen); }
+  .kreis.bad { background: var(--falsch); }
+  .kreis.now { animation: puls 1.2s ease-in-out infinite; }
+  @keyframes puls {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
+    50%     { box-shadow: 0 0 0 5px rgba(255,255,255,0); }
+  }
+
+  /* ---------- Frage ---------- */
+  .frage {
+    background: var(--karte);
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100px;
+  }
+  .frage.nummer {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: var(--schrift-frage); font-weight: 700;
+  }
+  .frage.name   { font-size: var(--schrift-name); font-weight: 700; }
+
+  /* ---------- Fragezeichen / Zeichen in der Mitte ---------- */
+  .mitte {
+    display: flex; align-items: center; justify-content: center;
+    height: 85px;
+  }
+  .mitte .fz {
+    font-size: var(--schrift-fragezeichen);
+    font-weight: 800;
+    color: var(--grau);
+    line-height: 1;
+    transition: opacity 0.25s ease;
+  }
+  .mitte .fz.weg { opacity: 0; }
+  .mitte svg { width: 64px; height: 64px; }
+
+  /* ---------- Antworten ---------- */
+  .antworten { display: flex; flex-direction: column; gap: 8px; }
+  .antwort {
+    padding: 18px 14px;
+    border: 1px solid var(--rand);
+    border-radius: 10px;
+    background: var(--karte);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--schrift-antwort);
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+  }
+  .antwort.nummer { font-family: ui-monospace, Menlo, monospace; font-weight: 700; }
+  .antwort:active { transform: scale(0.98); }
+  .antwort.ok {
+    border-color: var(--gruen); color: var(--gruen);
+    background: rgba(46,196,98,0.15);
+  }
+  .antwort.bad {
+    border-color: var(--falsch); color: var(--falsch);
+    background: rgba(230,57,70,0.15);
+  }
+  .antwort.dim { opacity: 0.3; }
+  .antworten.gesperrt .antwort { pointer-events: none; }
+
+  /* ---------- Häkchen / Kreuz (Animation) ---------- */
+  svg.zeichen path {
+    fill: none; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 200; stroke-dashoffset: 200;
+    animation: zeichnen 0.4s ease-out forwards;
+  }
+  svg.zeichen.ok  path { stroke: var(--gruen); }
+  svg.zeichen.bad path { stroke: var(--falsch); }
+  svg.zeichen { animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+  svg.zeichen.still, svg.zeichen.still path { animation: none; }
+  svg.zeichen.still path { stroke-dashoffset: 0; }
+
+  /* am Finger: erscheint an der Tipp-Stelle, fliegt zum Fragezeichen */
+  .finger {
+    position: fixed;
+    width: 64px; height: 64px;
+    margin: -32px 0 0 -32px;   /* zentriert auf den Punkt */
+    pointer-events: none;
+    transition: left var(--flug) ease-in-out, top var(--flug) ease-in-out;
+  }
+  .finger svg { width: 100%; height: 100%; }
+
+  @keyframes pop       { from{transform:scale(0.3)} to{transform:scale(1)} }
+  @keyframes zeichnen  { to{stroke-dashoffset:0} }
+
+  /* ---------- Ende ---------- */
+  .ende {
+    background: var(--karte);
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .ende .score {
+    font-size: 3.5rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .ende .score .slash { color: #5a5f6e; font-weight: 400; margin: 0 0.05em; }
+  .ende .spruch { font-size: 1.05rem; line-height: 1.45; }
+  .ende .spruch .fr { display: block; margin-bottom: 0.4rem; }
+  .ende .spruch .de { display: block; color: #9da1b0; }
+  .ende .fehler {
+    text-align: left;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    padding: 0.75rem 1rem;
+    background: rgba(230,57,70,0.08);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 8px;
+  }
+  .ende .fehler .nr {
+    font-family: ui-monospace, Menlo, monospace; font-weight: 700;
+    display: inline-block; width: 2.2em;
+  }
+  .ende .fehler .pfeil { color: #6a6f7e; margin: 0 0.4em; }
+  .nochmal {
+    width: 100%; padding: 16px;
+    border: none; border-radius: 10px;
+    background: var(--rot); color: #fff;
+    font: inherit; font-size: 1.1rem; font-weight: 700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="f1" id="b1"></div><div class="f2" id="b2"></div>
+  <div class="f3" id="b3"></div><div class="f4" id="b4"></div>
+  <span class="build" id="build"></span>
+  <button class="info-btn" onclick="infoZeigen(true)" aria-label="Info">ℹ️</button>
+</div>
+
+<div class="info zu" id="info">
+  <h2>Was ist das hier?</h2>
+  <p>Ein inoffizielles Quiz zum Lernen der Spielernummern des
+  EHC Biel-Bienne. Keine Verbindung zum Club. Namen und Nummern
+  stammen von ehcb.ch, Stand siehe Datum im Banner.</p>
+
+  <h2>Technik</h2>
+  <ul>
+    <li>Eine einzige HTML-Datei. Sonst nichts.</li>
+    <li>Benutzt nur HTML, CSS und JavaScript, wie es jeder Browser
+    von Haus aus kann. Keine Bibliotheken, keine Frameworks,
+    keine externen Schriften, keine Bilder.</li>
+    <li>Die Seite lädt nichts nach und sendet nichts. Sie funktioniert auch offline.</li>
+  </ul>
+
+  <h2>Daten</h2>
+  <ul>
+    <li>Keine Cookies.</li>
+    <li>Kein Tracking, keine Analytics, keine Statistik.</li>
+    <li>Nichts wird gespeichert, auch nicht lokal. Seite neu laden = alles weg.</li>
+    <li>Es gibt keinen Server, der etwas empfangen könnte.</li>
+  </ul>
+
+  <h2>Herkunft</h2>
+  <p>Der gesamte Code wurde zu 100 % von einer KI geschrieben,
+  im Dialog mit dem Autor. Der Autor hat Wünsche formuliert,
+  getestet und Korrekturen verlangt, aber keine Zeile selbst
+  geschrieben. Auch die Sprüche am Ende stammen von der KI.</p>
+
+  <button class="knopf" id="qbtn" onclick="quelltextZeigen()">Quelltext anzeigen</button>
+  <pre id="quelltext" class="code"></pre>
+  <button class="knopf rot" onclick="infoZeigen(false)">Zurück zum Quiz</button>
+</div>
+
+<div class="app">
+  <div class="kreise" id="kreise"></div>
+  <div id="inhalt"></div>
+</div>
+
+<script>
+// Quelltext festhalten, bevor das Script die Seite verändert
+const QUELLTEXT = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+function infoZeigen(auf) {
+  document.getElementById("info").classList.toggle("zu", !auf);
+  if (auf) document.getElementById("info").scrollTop = 0;
+}
+
+// Sehr einfache Einfärbung: Kommentare, Strings, Tags, Schlüsselwörter, Zahlen
+function einfaerben(code) {
+  const esc = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const muster = [
+    /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|&lt;!--[\s\S]*?--&gt;)/,        // c
+    /("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/,  // s
+    /(&lt;\/?[a-zA-Z][^&]*?&gt;)/,                                  // t
+    /\b(const|let|function|return|if|else|for|of|new|true|false)\b/, // k
+    /\b(\d+(?:\.\d+)?)\b/,                                          // n
+  ];
+  const klassen = ["c", "s", "t", "k", "n"];
+  const re = new RegExp(muster.map(m => m.source).join("|"), "g");
+  return esc.replace(re, (...g) => {
+    const i = g.slice(1, 6).findIndex(x => x !== undefined);
+    return `<span class="${klassen[i]}">${g[i + 1]}</span>`;
+  });
+}
+
+function quelltextZeigen() {
+  const pre = document.getElementById("quelltext");
+  const btn = document.getElementById("qbtn");
+  if (!pre.innerHTML) pre.innerHTML = einfaerben(QUELLTEXT);
+  const auf = pre.classList.toggle("auf");
+  btn.textContent = auf ? "Quelltext ausblenden" : "Quelltext anzeigen";
+}
+
+const HAKEN = "M20 52 L42 74 L82 30";
+const KREUZ = "M28 28 L72 72 M72 28 L28 72";
+
+function zeichenSvg(richtig, still) {
+  const cls = (richtig ? "ok" : "bad") + (still ? " still" : "");
+  const d = richtig ? HAKEN : KREUZ;
+  return `<svg class="zeichen ${cls}" viewBox="0 0 100 100">` +
+         `<path d="${d}"/></svg>`;
+}
+
+function mischen(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let fragen = [], aktuell = 0, ergebnisse = [], gesperrt = false;
+
+function rundeBauen() {
+  const auswahl = mischen(SPIELER).slice(0, FRAGEN_PRO_RUNDE);
+  return auswahl.map((sp, i) => {
+    const nrZeigen = i % 2 === 0;
+    const andere = mischen(SPIELER.filter(x => x !== sp)).slice(0, ANTWORTEN - 1);
+    const optionen = mischen([sp, ...andere]).map(o => ({
+      text: nrZeigen ? o.name : o.nr,
+      richtig: o === sp,
+    }));
+    return { spieler: sp, nrZeigen, optionen };
+  });
+}
+
+function start() {
+  fragen = rundeBauen();
+  aktuell = 0;
+  ergebnisse = [];
+  gesperrt = false;
+  zeigen();
+}
+
+function antworten(idx, ev) {
+  if (gesperrt) return;
+  gesperrt = true;
+
+  const f = fragen[aktuell];
+  const richtig = f.optionen[idx].richtig;
+  ergebnisse.push(richtig);
+
+  // Buttons färben
+  document.querySelectorAll(".antwort").forEach((b, i) => {
+    if (f.optionen[i].richtig) b.classList.add("ok");
+    else if (i === idx) b.classList.add("bad");
+    else b.classList.add("dim");
+  });
+  document.querySelector(".antworten").classList.add("gesperrt");
+
+  // Fragezeichen sofort ausblenden, Häkchen/Kreuz an der Tipp-Stelle erzeugen …
+  const mitte = document.getElementById("mitte");
+  mitte.querySelector(".fz").classList.add("weg");
+  const ziel = mitte.getBoundingClientRect();
+  const fg = document.createElement("div");
+  fg.className = "finger";
+  fg.style.setProperty("--flug", FLUG_MS + "ms");
+  fg.style.left = ev.clientX + "px";
+  fg.style.top  = ev.clientY + "px";
+  fg.innerHTML = zeichenSvg(richtig);
+  document.body.appendChild(fg);
+
+  // … und zum Fragezeichen fliegen lassen
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fg.style.left = (ziel.left + ziel.width / 2) + "px";
+    fg.style.top  = (ziel.top + ziel.height / 2) + "px";
+  }));
+
+  // bei Ankunft: Fragezeichen ersetzen, Flieger entfernen
+  setTimeout(() => {
+    mitte.innerHTML = zeichenSvg(richtig, true);
+    fg.remove();
+  }, FLUG_MS);
+
+  kreiseZeigen();
+
+  // nach Flug + Standzeit: nächste Frage
+  setTimeout(() => {
+    aktuell++;
+    gesperrt = false;
+    zeigen();
+  }, FLUG_MS + (richtig ? PAUSE_RICHTIG_MS : PAUSE_FALSCH_MS));
+}
+
+function kreiseZeigen() {
+  let html = "";
+  for (let i = 0; i < fragen.length; i++) {
+    let cls = "";
+    if (i < ergebnisse.length) cls = ergebnisse[i] ? "ok" : "bad";
+    else if (i === aktuell) cls = "now";
+    html += `<div class="kreis ${cls}"></div>`;
+  }
+  document.getElementById("kreise").innerHTML = html;
+}
+
+function zeigen() {
+  kreiseZeigen();
+  const el = document.getElementById("inhalt");
+
+  if (aktuell >= fragen.length) {
+    const n = ergebnisse.filter(Boolean).length;
+    const liste = SPRUECHE[Math.min(n, SPRUECHE.length - 1)];
+    const s = liste[Math.floor(Math.random() * liste.length)];
+
+    // Fehlerliste: nur die falsch beantworteten Spieler
+    let fehlerHtml = "";
+    const fehler = fragen.filter((f, i) => !ergebnisse[i]);
+    if (fehler.length > 0) {
+      fehlerHtml = `<div class="fehler">` + fehler.map(f =>
+        `<div><span class="nr">${f.spieler.nr}</span>` +
+        `<span class="pfeil">→</span>${f.spieler.name}</div>`
+      ).join("") + `</div>`;
+    }
+
+    el.innerHTML = `<div class="ende">
+      <div class="score">${n}<span class="slash">/</span>${fragen.length}</div>
+      <div class="spruch">
+        <span class="fr">${s.fr}</span><span class="de">${s.de}</span>
+      </div>
+      ${fehlerHtml}
+      <button class="nochmal" onclick="start()">Nochmal · Encore</button>
+    </div>`;
+    return;
+  }
+
+  const f = fragen[aktuell];
+  const sp = f.spieler;
+  let html = f.nrZeigen
+    ? `<div class="frage nummer">${sp.nr}</div>`
+    : `<div class="frage name">${sp.name}</div>`;
+  html += `<div class="mitte" id="mitte"><span class="fz">?</span></div>`;
+  html += `<div class="antworten">`;
+  f.optionen.forEach((o, i) => {
+    const cls = f.nrZeigen ? "antwort" : "antwort nummer";
+    html += `<button class="${cls}" onclick="antworten(${i}, event)">` +
+            `${o.text}</button>`;
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+document.getElementById("b1").textContent = BANNER_OBEN_LINKS;
+document.getElementById("b2").textContent = BANNER_OBEN_RECHTS;
+document.getElementById("b3").textContent = BANNER_UNTEN_LINKS;
+document.getElementById("b4").textContent = BANNER_UNTEN_RECHTS;
+document.getElementById("build").textContent = BUILD_DATUM;
+start();
+</script>
+</body>
+</html>
